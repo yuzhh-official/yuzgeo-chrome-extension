@@ -1,9 +1,10 @@
 import type { ParsedDocument, PlatformId, PlatformStatus, SyncTask } from '@yuzgeo/core';
-import { errorMessage, parseDocument, PLATFORMS, renderHtml, rewriteImageUrls } from '@yuzgeo/core';
+import { errorMessage, parseDocument, PLATFORMS, textOnlyMarkdown } from '@yuzgeo/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { request } from '@/lib/messaging';
-import type { LocalImages, LocalSource } from './source';
-import { fromDirectory, fromFiles, inspectImages, storeAssets } from './source';
+import type { LocalSource } from './source';
+import { fromDirectory, fromFiles } from './source';
+import { renderPreview } from './preview';
 
 const SELECTION_KEY = 'yuzgeo:selected-platforms';
 
@@ -11,7 +12,6 @@ interface OpenDocument {
   path: string;
   raw: string;
   doc: ParsedDocument;
-  images: LocalImages;
 }
 
 export default function App() {
@@ -20,30 +20,48 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [reading, setReading] = useState(false);
+  const readId = useRef(0);
   const [selected, setSelected] = useState<Set<PlatformId>>(loadSelection);
 
   const openFile = useCallback(async (src: LocalSource, path: string) => {
+    const id = ++readId.current;
     setError(null);
+    setOpen(null);
+    setReading(true);
     try {
       const file = await src.readFile(path);
       if (!file) throw new Error(`读取失败：${path}`);
       const raw = await file.text();
-      const doc = parseDocument(raw, file.name.replace(/\.(md|markdown)$/i, ''));
-      setOpen({ path, raw, doc, images: await inspectImages(src, path, doc) });
+      if (!raw.trim()) throw new Error('文件内容为空，请确认 Markdown 已保存后重新选择');
+      const parsed = parseDocument(raw, file.name.replace(/\.(md|markdown)$/i, ''));
+      const doc = { ...parsed, markdown: textOnlyMarkdown(parsed.markdown) };
+      if (!doc.markdown.trim())
+        throw new Error('去除图片后没有可同步的正文，请补充内容并保存后重新选择');
+      if (id !== readId.current) return;
+      setOpen({ path, raw, doc });
     } catch (e) {
-      setOpen(null);
-      setError(`解析 ${path} 失败：${errorMessage(e)}`);
+      if (id === readId.current) {
+        setOpen(null);
+        setError(`解析 ${path} 失败：${errorMessage(e)}`);
+      }
+    } finally {
+      if (id === readId.current) setReading(false);
     }
   }, []);
 
   const openSource = useCallback(
     (src: LocalSource) => {
+      ++readId.current;
       setSource(src);
       setOpen(null);
       setTaskId(null);
       const first = src.markdownFiles[0];
       if (first) void openFile(src, first);
-      else setError('没有找到 Markdown 文件');
+      else {
+        setReading(false);
+        setError('没有找到 Markdown 文件');
+      }
     },
     [openFile],
   );
@@ -67,15 +85,13 @@ export default function App() {
   };
 
   const submit = async (platforms: PlatformId[]) => {
-    if (!source || !open) return;
+    if (!open) return;
     setSubmitting(true);
     setError(null);
     try {
-      const assets = await storeAssets(source, open.images.local);
       const { taskId } = await request('drafts/create', {
         markdown: open.raw,
         filePath: open.path,
-        assets,
         platforms,
       });
       setTaskId(taskId);
@@ -101,7 +117,7 @@ export default function App() {
           选择文件
           <input
             type="file"
-            accept=".md,.markdown,image/*"
+            accept=".md,.markdown"
             multiple
             className="hidden"
             onChange={(e) => {
@@ -114,10 +130,14 @@ export default function App() {
         {source && <span className="text-sm text-gray-600">已打开：{source.name}</span>}
       </section>
       <p className="mt-2 text-xs text-gray-500">
-        选择文件夹才能自动带上相对路径引用的本地图片；单选文件时可同时多选需要的图片。
+        当前仅同步 Markdown 文字内容：保留排版和图片说明，跳过图片与封面；本地原文件不会修改。
       </p>
 
-      {error && <p className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
 
       {source && source.markdownFiles.length > 1 && (
         <select
@@ -137,7 +157,15 @@ export default function App() {
       )}
 
       <div className="mt-6 grid gap-6 md:grid-cols-[1fr_320px]">
-        <div>{open ? <DocumentPreview source={source!} open={open} /> : <EmptyState />}</div>
+        <div>
+          {reading ? (
+            <p role="status">正在读取 Markdown…</p>
+          ) : open ? (
+            <DocumentPreview open={open} />
+          ) : (
+            <EmptyState />
+          )}
+        </div>
         <aside className="space-y-6">
           <PlatformPicker selected={selected} onToggle={togglePlatform} />
           <button
@@ -147,7 +175,7 @@ export default function App() {
           >
             {submitting ? '提交中…' : `保存为草稿（${selected.size} 个平台）`}
           </button>
-          {taskId && <TaskProgress taskId={taskId} onRetry={submit} />}
+          {taskId && <TaskProgress key={taskId} taskId={taskId} onRetry={submit} />}
         </aside>
       </div>
 
@@ -164,36 +192,16 @@ function EmptyState() {
   );
 }
 
-function DocumentPreview({ source, open }: { source: LocalSource; open: OpenDocument }) {
-  const { doc, images } = open;
-  const [html, setHtml] = useState('');
-
-  useEffect(() => {
-    // Local images are shown through object URLs; the preview runs in a script-less sandbox.
-    const urls: string[] = [];
-    let cancelled = false;
-    void (async () => {
-      const replacements = new Map<string, string>();
-      for (const path of images.local) {
-        const file = await source.readFile(path);
-        if (!file) continue;
-        const url = URL.createObjectURL(file);
-        urls.push(url);
-        for (const ref of refsFor(open, path)) replacements.set(ref, url);
-      }
-      if (!cancelled) setHtml(renderHtml(rewriteImageUrls(doc.markdown, replacements)));
-    })();
-    return () => {
-      cancelled = true;
-      urls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [source, open, doc, images]);
-
-  const srcDoc = useMemo(
-    () =>
-      `<!doctype html><meta charset="utf-8"><style>body{font:15px/1.7 system-ui,sans-serif;margin:16px;color:#111}img{max-width:100%}pre{background:#f5f5f5;padding:12px;overflow:auto}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:4px 8px}</style>${html}`,
-    [html],
-  );
+function DocumentPreview({ open }: { open: OpenDocument }) {
+  const { doc } = open;
+  const [showSource, setShowSource] = useState(false);
+  const rendered = useMemo(() => {
+    try {
+      return { html: renderPreview(doc.markdown), error: null };
+    } catch (e) {
+      return { html: '', error: `预览生成失败：${errorMessage(e)}。请查看 Markdown 原文。` };
+    }
+  }, [doc.markdown]);
 
   return (
     <div className="space-y-3">
@@ -203,31 +211,29 @@ function DocumentPreview({ source, open }: { source: LocalSource; open: OpenDocu
         {doc.frontMatter.tags?.length ? (
           <Field label="标签" value={doc.frontMatter.tags.join('、')} />
         ) : null}
-        {doc.frontMatter.cover && <Field label="封面" value={doc.frontMatter.cover} />}
-        <Field label="本地图片" value={`${images.local.length} 张`} />
+        <Field label="正文" value={`${doc.markdown.length} 字符`} />
       </dl>
-      {images.missing.length > 0 && (
-        <p className="rounded bg-amber-50 p-3 text-sm text-amber-800">
-          以下图片找不到，将保留原链接：{images.missing.join('、')}
+      {rendered.error && (
+        <p role="alert" className="text-sm text-red-700">
+          {rendered.error}
         </p>
       )}
-      <iframe
-        title="预览"
-        sandbox=""
-        srcDoc={srcDoc}
-        className="h-[60vh] w-full rounded border border-gray-200 bg-white"
-      />
+      <button className={buttonClass} onClick={() => setShowSource(!showSource)}>
+        {showSource ? '返回预览' : '查看 Markdown 原文'}
+      </button>
+      {showSource || rendered.error ? (
+        <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap break-words rounded border border-gray-200 p-4 text-sm">
+          {open.raw}
+        </pre>
+      ) : (
+        <article
+          aria-label="正文预览"
+          className="markdown-preview max-h-[60vh] overflow-auto rounded border border-gray-200 bg-white p-4"
+          dangerouslySetInnerHTML={{ __html: rendered.html }}
+        />
+      )}
     </div>
   );
-}
-
-/** The original refs in the document that resolve to `path`, for swapping in preview URLs. */
-function refsFor(open: OpenDocument, path: string): string[] {
-  const all = [
-    ...open.doc.markdown.matchAll(/!\[[^\]]*\]\(<?([^)\s>]+)>?|src=["']([^"']+)["']/g),
-  ].map((m) => m[1] ?? m[2] ?? '');
-  const name = path.split('/').pop() ?? path;
-  return all.filter((ref) => decodeURI(ref.split(/[?#]/)[0] ?? '').endsWith(name));
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -248,11 +254,19 @@ function PlatformPicker({
 }) {
   const [platforms, setPlatforms] = useState<PlatformStatus[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
     (forceRefresh: boolean) =>
       request('platforms/list', { forceRefresh })
-        .then(setPlatforms)
+        .then((next) => {
+          setPlatforms(next);
+          setError(null);
+        })
+        .catch((e: unknown) => {
+          setPlatforms(null);
+          setError(errorMessage(e));
+        })
         .finally(() => setLoading(false)),
     [],
   );
@@ -281,6 +295,11 @@ function PlatformPicker({
           {loading ? '检查中…' : '刷新登录状态'}
         </button>
       </div>
+      {error && (
+        <p role="alert" className="mt-2 rounded bg-red-50 p-3 text-sm text-red-700">
+          平台列表加载失败：{error}
+        </p>
+      )}
       <ul className="mt-2 space-y-2">
         {platforms?.map((p) => (
           <li
@@ -331,24 +350,43 @@ function TaskProgress({
   onRetry(platforms: PlatformId[]): void;
 }) {
   const [task, setTask] = useState<SyncTask | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     let stopped = false;
     const poll = async () => {
-      const next = await request('tasks/get', { taskId });
-      if (stopped) return;
-      setTask(next);
-      const done = next?.results.every((r) => r.status === 'succeeded' || r.status === 'failed');
-      if (!done) timer.current = window.setTimeout(poll, 1000);
+      try {
+        const next = await request('tasks/get', { taskId });
+        if (stopped) return;
+        if (!next) throw new Error('未找到该同步任务，请查看历史记录或平台草稿箱');
+        setTask(next);
+        setError(null);
+        const done = next.results.every((r) => r.status === 'succeeded' || r.status === 'failed');
+        if (!done) timer.current = window.setTimeout(poll, 1000);
+      } catch (e) {
+        if (!stopped) setError(errorMessage(e));
+      }
     };
     void poll();
     return () => {
       stopped = true;
       window.clearTimeout(timer.current);
     };
-  }, [taskId]);
+  }, [taskId, refreshKey]);
 
+  if (error)
+    return (
+      <div className="space-y-2">
+        <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700">
+          无法查询同步进度：{error}。草稿可能已创建，请先查询结果。
+        </p>
+        <button className={buttonClass} onClick={() => setRefreshKey((value) => value + 1)}>
+          重新查询进度
+        </button>
+      </div>
+    );
   if (!task) return null;
   const failed = task.results.filter((r) => r.status === 'failed').map((r) => r.platform);
 

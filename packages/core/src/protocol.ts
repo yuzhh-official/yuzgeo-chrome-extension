@@ -30,10 +30,8 @@ export interface PlatformStatus extends AuthState {
 export interface CreateDraftsParams {
   /** Raw file content, front-matter included. */
   markdown: string;
-  /** Path of the markdown file relative to the asset root, used to resolve relative image refs. */
+  /** Markdown file name/path, used as the fallback title. */
   filePath: string;
-  /** Local assets already stored in the extension's asset store: root-relative path → asset id. */
-  assets: Record<string, string>;
   platforms: PlatformId[];
 }
 

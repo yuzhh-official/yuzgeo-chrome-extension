@@ -8,6 +8,18 @@ export default defineConfig({
   vite: () => ({
     plugins: [tailwindcss()],
   }),
+  hooks: {
+    'vite:build:extendConfig': (entrypoints, config) => {
+      if (!entrypoints.some((entrypoint) => entrypoint.type === 'background')) return;
+      // MV3 backgrounds have no DOM. Prefer dependencies' worker exports over
+      // browser exports (notably decode-named-character-reference in remark).
+      config.resolve ??= {};
+      config.resolve.conditions = [
+        'worker',
+        ...(config.resolve.conditions ?? ['module', 'browser', 'development|production']),
+      ];
+    },
+  },
   manifest: {
     name: 'yuzgeo',
     description: '把本地 Markdown 一键保存为掘金、知乎、CSDN 等平台的草稿',

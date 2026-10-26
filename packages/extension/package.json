@@ -11,10 +11,13 @@
     "zip": "wxt zip",
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:background": "wxt build && node --test scripts/background-smoke.mjs",
+    "test:ui": "wxt build && node --test scripts/dashboard-smoke.mjs"
   },
   "dependencies": {
     "@yuzgeo/core": "workspace:*",
+    "dompurify": "3.4.17",
     "js-md5": "0.9.2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
@@ -24,6 +27,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@wxt-dev/module-react": "1.2.2",
+    "playwright": "1.62.1",
     "tailwindcss": "4.3.3",
     "wxt": "0.21.4"
   }

@@ -5,15 +5,7 @@ import type {
   PlatformTaskResult,
   SyncTask,
 } from '@yuzgeo/core';
-import {
-  errorMessage,
-  isExternalRef,
-  parseDocument,
-  preparePost,
-  resolveAssetPath,
-} from '@yuzgeo/core';
-import { deleteAssets, getAsset } from '@/lib/assets';
-import { request } from '@/lib/http';
+import { errorMessage, parseDocument, preparePost, textOnlyMarkdown } from '@yuzgeo/core';
 import { getAdapter } from '@/platforms';
 import { checkAuth } from './auth';
 
@@ -60,6 +52,8 @@ export async function createDrafts(params: CreateDraftsParams): Promise<string> 
   const doc = parseDocument(params.markdown, fallbackTitle);
   if (!doc.title) throw new Error('缺少标题：请在 front-matter 写 title，或以一级标题开头');
 
+  if (!textOnlyMarkdown(doc.markdown).trim()) throw new Error('去除图片后没有可同步的正文');
+
   const task: SyncTask = {
     id: crypto.randomUUID(),
     title: doc.title,
@@ -70,9 +64,7 @@ export async function createDrafts(params: CreateDraftsParams): Promise<string> 
   all.unshift(task);
   await saveTasks();
 
-  void Promise.allSettled(
-    task.results.map((result) => runPlatform(task, result, doc, params)),
-  ).then(() => deleteAssets(Object.values(params.assets)));
+  void Promise.allSettled(task.results.map((result) => runPlatform(task, result, doc)));
   return task.id;
 }
 
@@ -80,7 +72,6 @@ async function runPlatform(
   task: SyncTask,
   result: PlatformTaskResult,
   doc: ParsedDocument,
-  params: CreateDraftsParams,
 ): Promise<void> {
   const update = (patch: Partial<PlatformTaskResult>) => {
     Object.assign(result, patch);
@@ -103,10 +94,6 @@ async function runPlatform(
       platform,
       format: adapter.meta.format,
       html: adapter.htmlOptions,
-      resolveImage: (ref) => resolveImage(ref, params),
-      uploadImage: (image) => adapter.uploadImage(image, ctx),
-      warn: (message) => update({ warnings: [...result.warnings, message] }),
-      onStep: (step) => update({ step }),
     });
 
     update({ step: '创建草稿' });
@@ -115,16 +102,4 @@ async function runPlatform(
   } catch (error) {
     update({ status: 'failed', step: undefined, error: errorMessage(error) });
   }
-}
-
-async function resolveImage(ref: string, params: CreateDraftsParams): Promise<Blob | null> {
-  if (isExternalRef(ref)) {
-    const url = ref.startsWith('//') ? `https:${ref}` : ref;
-    if (!/^(https?|data):/i.test(url)) return null;
-    // Remote hosts outside our host permissions only work if they allow CORS.
-    return (await request(url)).blob();
-  }
-  const path = resolveAssetPath(params.filePath, ref);
-  const id = path ? params.assets[path] : undefined;
-  return id ? getAsset(id) : null;
 }

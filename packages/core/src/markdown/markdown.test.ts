@@ -108,46 +108,44 @@ describe('renderHtml', () => {
 });
 
 describe('preparePost', () => {
-  it('uploads each image once, rewrites refs and keeps failed ones', async () => {
-    const png = new Blob(['same-bytes']);
-    const uploadImage = vi.fn(async () => 'https://cdn/x');
-    const warn = vi.fn();
-
+  it('omits images and cover while keeping text, tags and platform settings', async () => {
     const post = await preparePost(
       {
         title: 'T',
-        markdown: '![a](./a.png) ![b](./b.png) ![m](./missing.png)',
-        frontMatter: { tags: ['t'], cover: './a.png', platforms: { juejin: { category: '前端' } } },
+        markdown: '正文 ![图注](./missing.png) ![](https://example.com/a.png)',
+        frontMatter: {
+          tags: ['t'],
+          cover: './cover.png',
+          platforms: { juejin: { category: '前端' } },
+        },
       },
-      {
-        platform: 'juejin',
-        format: 'markdown',
-        resolveImage: async (ref) => (ref === './missing.png' ? null : png),
-        uploadImage,
-        warn,
-      },
+      { platform: 'juejin', format: 'markdown' },
     );
-
-    expect(uploadImage).toHaveBeenCalledTimes(1);
-    expect(post.body).toBe('![a](https://cdn/x) ![b](https://cdn/x) ![m](./missing.png)');
-    expect(post.coverUrl).toBe('https://cdn/x');
+    expect(post.body).toBe('正文 图注 ');
+    expect(post.coverUrl).toBeUndefined();
     expect(post.tags).toEqual(['t']);
     expect(post.extra).toEqual({ category: '前端' });
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('./missing.png'));
   });
 
-  it('renders HTML for HTML platforms', async () => {
+  it('renders HTML without the platform image-based math hook', async () => {
+    const math = vi.fn(() => '<img src="https://example.com/equation">');
     const post = await preparePost(
-      { title: 'T', markdown: '**hi**', frontMatter: {} },
-      {
-        platform: 'zhihu',
-        format: 'html',
-        resolveImage: async () => null,
-        uploadImage: async () => '',
-        warn: () => {},
-      },
+      { title: 'T', markdown: '**hi** $x$ ![说明](data:image/png;base64,AA)', frontMatter: {} },
+      { platform: 'zhihu', format: 'html', html: { math } },
     );
-    expect(post.body).toBe('<p><strong>hi</strong></p>');
-    expect(post.markdown).toBe('**hi**');
+    expect(post.body).toContain('<strong>hi</strong>');
+    expect(post.body).toContain('x');
+    expect(post.body).toContain('说明');
+    expect(post.body).not.toContain('<img');
+    expect(math).not.toHaveBeenCalled();
+  });
+
+  it('rejects a document containing only images without alternative text', async () => {
+    await expect(
+      preparePost(
+        { title: 'T', markdown: '![](./a.png)', frontMatter: {} },
+        { platform: 'juejin', format: 'markdown' },
+      ),
+    ).rejects.toThrow('去除图片后没有可同步的正文');
   });
 });
