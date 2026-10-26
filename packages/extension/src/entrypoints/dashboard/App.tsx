@@ -445,9 +445,11 @@ function PlatformDifferences({
               {selected.includes(id) && <span className="ml-2 text-xs text-accent">已选</span>}
             </span>
             <span className="min-w-0 flex-1 text-ink-soft">
-              {html
-                ? '转换为富文本：代码块按平台编辑器格式，公式保留为文本。'
-                : 'Markdown 原样保存：代码块、表格和公式源码保留。'}
+              {id === 'sohu'
+                ? '由搜狐编辑器保存：代码按行、表格按行转为段落，公式保留为文本；需账号具备存草稿权限。'
+                : html
+                  ? '转换为富文本：代码块按平台编辑器格式，公式保留为文本。'
+                  : 'Markdown 原样保存：代码块、表格和公式源码保留。'}
               <span className="text-muted"> 图片不同步，标签需在平台编辑器中确认。</span>
             </span>
           </li>

@@ -28,21 +28,25 @@ It is built for developers, tech bloggers and teams who write for several Chines
 - **Per-platform formatting**: Markdown as-is for Juejin, CSDN, Alibaba Cloud, Tencent Cloud and Douyin; rich text for Zhihu, with code blocks in Zhihu's editor format. For Xiaohongshu long posts, the extension opens the editor in a background tab, fills it in and clicks the editor's own "save draft", so the draft lands in that browser's Xiaohongshu draft box.
 - **Preview before syncing**: preview, raw Markdown and per-platform differences, so you know what each platform will receive.
 - **Sync history** stored locally, with links to every draft.
-- **Privacy first**: no server, no analytics, no cookie collection; host permissions only for supported platforms, and no scripts injected into websites.
+- **Privacy first**: no server, no analytics, no cookie collection; host permissions only for supported platforms. When needed, a function runs only in the selected creator platform, without persistent content scripts.
 
 ## Supported platforms
 
-| Platform                                             | Draft format            | Login check | Drafts                                    | Status                                         |
-| ---------------------------------------------------- | ----------------------- | ----------- | ----------------------------------------- | ---------------------------------------------- |
-| Juejin (掘金)                                        | Markdown                | ✅          | ✅                                        | Implemented, pending real-account verification |
-| Zhihu (知乎专栏)                                     | Rich text (HTML)        | ✅          | ✅                                        | Implemented, pending real-account verification |
-| CSDN                                                 | Markdown                | ✅          | ✅                                        | Implemented, pending real-account verification |
-| Alibaba Cloud Developer Community (阿里云开发者社区) | Markdown                | ✅          | ✅                                        | Implemented, pending real-account verification |
-| Tencent Cloud Developer Community (腾讯云开发者社区) | Markdown                | ✅          | ✅                                        | Implemented, pending real-account verification |
-| Douyin long posts (抖音长文)                         | Markdown                | ✅          | ✅                                        | Implemented, pending real-account verification |
-| Xiaohongshu long posts (小红书长文)                  | Formatted by its editor | ✅          | ✅ Saved to the browser's local draft box | Implemented, pending real-account verification |
+| Platform                                             | Draft format                                   | Login check | Drafts                                    | Status                                                                      |
+| ---------------------------------------------------- | ---------------------------------------------- | ----------- | ----------------------------------------- | --------------------------------------------------------------------------- |
+| Juejin (掘金)                                        | Markdown                                       | ✅          | ✅                                        | Implemented, pending real-account verification                              |
+| Zhihu (知乎专栏)                                     | Rich text (HTML)                               | ✅          | ✅                                        | Implemented, pending real-account verification                              |
+| CSDN                                                 | Markdown                                       | ✅          | ✅                                        | Implemented, pending real-account verification                              |
+| Alibaba Cloud Developer Community (阿里云开发者社区) | Markdown                                       | ✅          | ✅                                        | Implemented, pending real-account verification                              |
+| Tencent Cloud Developer Community (腾讯云开发者社区) | Markdown                                       | ✅          | ✅                                        | Implemented, pending real-account verification                              |
+| Douyin long posts (抖音长文)                         | Markdown                                       | ✅          | ✅                                        | Implemented, pending real-account verification                              |
+| Xiaohongshu long posts (小红书长文)                  | Formatted by its editor                        | ✅          | ✅ Saved to the browser's local draft box | Implemented, pending real-account verification                              |
+| Sohu (搜狐号)                                        | HTML via editor; code/tables become paragraphs | ✅          | Implemented                               | Account lookup verified; saving blocked by account verification requirement |
+| Baijiahao (百家号)                                   | Rich text (HTML)                               | Implemented | Implemented                               | Pending real-account verification                                           |
 
 > **The current version syncs text only.** Headings, paragraphs, code blocks, tables, links and image captions are kept; images and covers are not uploaded yet.
+
+Sohu uses a fresh editor tab and only clicks “存草稿”; account restrictions are respected. Baijiahao uses its draft API with an editor token held only in memory. See [verification notes](docs/PLATFORM-NOTES-sohu-baijiahao.md) for sources and limitations.
 
 ## How it works
 
@@ -110,6 +114,8 @@ The repository includes an MCP server skeleton (`@yuzgeo/mcp-server`). It will l
 - [ ] MCP server for AI agents
 - [x] Douyin long posts
 - [x] Xiaohongshu long posts
+- [x] Sohu and Baijiahao adapters (live draft verification pending)
+- [ ] Weibo long articles (deferred)
 - [ ] Chrome Web Store release
 
 ## Development

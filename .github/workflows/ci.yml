@@ -22,7 +22,7 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm --filter @yuzgeo/extension exec playwright install --with-deps chromium
-      - run: pnpm --filter @yuzgeo/extension exec node --test scripts/background-smoke.mjs scripts/dashboard-smoke.mjs
+      - run: pnpm --filter @yuzgeo/extension exec node --test scripts/background-smoke.mjs scripts/dashboard-smoke.mjs scripts/sohu-editor-smoke.mjs
       - run: pnpm --filter @yuzgeo/extension zip
       - uses: actions/upload-artifact@v4
         with:

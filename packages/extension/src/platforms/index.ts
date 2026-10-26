@@ -1,8 +1,10 @@
 import type { PlatformId } from '@yuzgeo/core';
 import { aliyun } from './aliyun';
+import { baijiahao } from './baijiahao';
 import { csdn } from './csdn';
 import { douyin } from './douyin';
 import { juejin } from './juejin';
+import { sohu } from './sohu';
 import { tencentcloud } from './tencentcloud';
 import type { ExtensionAdapter } from './types';
 import { xiaohongshu } from './xiaohongshu';
@@ -16,6 +18,8 @@ export const adapters: Partial<Record<PlatformId, ExtensionAdapter>> = {
   tencentcloud,
   douyin,
   xiaohongshu,
+  sohu,
+  baijiahao,
 };
 
 export function getAdapter(id: PlatformId): ExtensionAdapter {

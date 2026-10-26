@@ -31,6 +31,8 @@ test('built dashboard imports Markdown and communicates with its worker', async 
         if (String(url).includes('/user_api/v1/user/get'))
           return Response.json({ err_no: 0, data: { user_id: '1', user_name: '测试账号' } });
         if (String(url).includes('/api/v4/me')) return Response.json({ name: '测试账号' });
+        if (String(url).endsWith('/builder/app/appinfo'))
+          return Response.json({ errno: 401, errmsg: '请先登录' });
         throw new Error(`Unexpected network request: ${url}`);
       };
     });
@@ -51,6 +53,9 @@ test('built dashboard imports Markdown and communicates with its worker', async 
     await t.test('platforms load from the extension tab', async () => {
       await page.getByRole('checkbox', { name: '掘金' }).waitFor();
       assert.equal(await page.getByRole('checkbox', { name: '知乎' }).isEnabled(), true);
+      assert.equal(await page.getByRole('checkbox', { name: '搜狐号' }).isEnabled(), false);
+      assert.equal(await page.getByRole('checkbox', { name: '百家号' }).isEnabled(), false);
+      assert.equal(await page.getByRole('checkbox', { name: '微博头条文章' }).count(), 0);
     });
 
     await t.test('real Markdown file renders text and tables without images', async () => {
@@ -72,7 +77,12 @@ test('built dashboard imports Markdown and communicates with its worker', async 
       await page.getByRole('tab', { name: 'Markdown 原文' }).click();
       assert.match(await page.locator('pre').innerText(), /title: yuzgeo/);
       await page.getByRole('tab', { name: '各平台差异' }).click();
-      await page.getByText('转换为富文本', { exact: false }).waitFor();
+      await page
+        .getByRole('listitem')
+        .filter({ hasText: '知乎' })
+        .getByText('转换为富文本', { exact: false })
+        .waitFor();
+      await page.getByText('由搜狐编辑器保存', { exact: false }).waitFor();
       await page.getByRole('tab', { name: '预览' }).click();
       await page.getByRole('article', { name: '正文预览' }).locator('table').waitFor();
     });
@@ -237,7 +247,7 @@ test('built dashboard imports Markdown and communicates with its worker', async 
       assert.ok(
         requests.every((r) =>
           // Login checks of the other platforms run when the platform list loads.
-          /user_api|api\/v4\/me|article_draft\/create|api\/articles\/|my\/user\/getUser|api\/user\/session/.test(
+          /user_api|api\/v4\/me|article_draft\/create|api\/articles\/|my\/user\/getUser|api\/user\/session|builder\/app\/appinfo/.test(
             r.url,
           ),
         ),

@@ -6,6 +6,8 @@ export const PLATFORM_IDS = [
   'tencentcloud',
   'douyin',
   'xiaohongshu',
+  'sohu',
+  'baijiahao',
 ] as const;
 
 export type PlatformId = (typeof PLATFORM_IDS)[number];
@@ -89,6 +91,20 @@ export const PLATFORMS: Record<PlatformId, PlatformMeta> = {
     homepage: 'https://creator.xiaohongshu.com',
     hostPermissions: ['https://creator.xiaohongshu.com/*', 'https://*.xiaohongshu.com/*'],
     format: 'markdown',
+  },
+  sohu: {
+    id: 'sohu',
+    name: '搜狐号',
+    homepage: 'https://mp.sohu.com/home',
+    hostPermissions: ['https://mp.sohu.com/*'],
+    format: 'html',
+  },
+  baijiahao: {
+    id: 'baijiahao',
+    name: '百家号',
+    homepage: 'https://baijiahao.baidu.com',
+    hostPermissions: ['https://baijiahao.baidu.com/*'],
+    format: 'html',
   },
 };
 

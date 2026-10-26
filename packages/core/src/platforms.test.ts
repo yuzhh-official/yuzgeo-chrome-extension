@@ -11,6 +11,8 @@ describe('isPlatformId', () => {
       'tencentcloud',
       'douyin',
       'xiaohongshu',
+      'sohu',
+      'baijiahao',
     ]) {
       expect(isPlatformId(id)).toBe(true);
     }
