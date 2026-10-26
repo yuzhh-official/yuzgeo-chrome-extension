@@ -1,4 +1,4 @@
-export const PLATFORM_IDS = ['juejin', 'zhihu', 'csdn'] as const;
+export const PLATFORM_IDS = ['juejin', 'zhihu', 'csdn', 'aliyun', 'tencentcloud'] as const;
 
 export type PlatformId = (typeof PLATFORM_IDS)[number];
 
@@ -44,7 +44,26 @@ export const PLATFORMS: Record<PlatformId, PlatformMeta> = {
     id: 'csdn',
     name: 'CSDN',
     homepage: 'https://mp.csdn.net',
-    hostPermissions: [],
+    hostPermissions: [
+      'https://mp.csdn.net/*',
+      'https://bizapi.csdn.net/*',
+      'https://me.csdn.net/*',
+      'https://g.csdnimg.cn/*',
+    ],
+    format: 'markdown',
+  },
+  aliyun: {
+    id: 'aliyun',
+    name: '阿里云开发者社区',
+    homepage: 'https://developer.aliyun.com',
+    hostPermissions: ['https://developer.aliyun.com/*'],
+    format: 'markdown',
+  },
+  tencentcloud: {
+    id: 'tencentcloud',
+    name: '腾讯云开发者社区',
+    homepage: 'https://cloud.tencent.com/developer',
+    hostPermissions: ['https://cloud.tencent.com/*'],
     format: 'markdown',
   },
 };

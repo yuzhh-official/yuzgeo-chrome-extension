@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { isPlatformId } from './platforms';
 
 describe('isPlatformId', () => {
-  it('accepts the first-release platforms', () => {
-    expect(isPlatformId('juejin')).toBe(true);
-    expect(isPlatformId('zhihu')).toBe(true);
-    expect(isPlatformId('csdn')).toBe(true);
+  it('accepts every registered platform', () => {
+    for (const id of ['juejin', 'zhihu', 'csdn', 'aliyun', 'tencentcloud']) {
+      expect(isPlatformId(id)).toBe(true);
+    }
   });
 
   it('rejects unknown values', () => {

@@ -234,7 +234,10 @@ test('built dashboard imports Markdown and communicates with its worker', async 
       assert.equal(zhihu.titleImage, undefined);
       assert.ok(
         requests.every((r) =>
-          /user_api|api\/v4\/me|article_draft\/create|api\/articles\//.test(r.url),
+          // Login checks of the other platforms run when the platform list loads.
+          /user_api|api\/v4\/me|article_draft\/create|api\/articles\/|my\/user\/getUser|api\/user\/session/.test(
+            r.url,
+          ),
         ),
         JSON.stringify(requests),
       );
