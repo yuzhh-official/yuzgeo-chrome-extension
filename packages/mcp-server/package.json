@@ -1,0 +1,29 @@
+{
+  "name": "@yuzgeo/mcp-server",
+  "version": "0.0.0",
+  "description": "MCP server that lets AI agents save local markdown as platform drafts through the yuzgeo extension",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "yuzgeo-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "ws": "8.22.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/ws": "8.18.2",
+    "@yuzgeo/core": "workspace:*",
+    "tsup": "9.0.0"
+  }
+}

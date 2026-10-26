@@ -1,0 +1,30 @@
+{
+  "name": "@yuzgeo/extension",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Chrome extension that saves local markdown as drafts on multiple blogging platforms",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@yuzgeo/core": "workspace:*",
+    "js-md5": "0.9.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@wxt-dev/module-react": "1.2.2",
+    "tailwindcss": "4.3.3",
+    "wxt": "0.21.4"
+  }
+}
