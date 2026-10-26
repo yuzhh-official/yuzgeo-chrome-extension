@@ -1,4 +1,12 @@
-export const PLATFORM_IDS = ['juejin', 'zhihu', 'csdn', 'aliyun', 'tencentcloud'] as const;
+export const PLATFORM_IDS = [
+  'juejin',
+  'zhihu',
+  'csdn',
+  'aliyun',
+  'tencentcloud',
+  'douyin',
+  'xiaohongshu',
+] as const;
 
 export type PlatformId = (typeof PLATFORM_IDS)[number];
 
@@ -64,6 +72,22 @@ export const PLATFORMS: Record<PlatformId, PlatformMeta> = {
     name: '腾讯云开发者社区',
     homepage: 'https://cloud.tencent.com/developer',
     hostPermissions: ['https://cloud.tencent.com/*'],
+    format: 'markdown',
+  },
+  // The next two work inside a creator-center tab: Douyin signs requests with scripts only its own
+  // pages have, and Xiaohongshu keeps long-article drafts in the browser, saved by its editor.
+  douyin: {
+    id: 'douyin',
+    name: '抖音长文',
+    homepage: 'https://creator.douyin.com',
+    hostPermissions: ['https://creator.douyin.com/*', 'https://*.douyin.com/*'],
+    format: 'markdown',
+  },
+  xiaohongshu: {
+    id: 'xiaohongshu',
+    name: '小红书长文',
+    homepage: 'https://creator.xiaohongshu.com',
+    hostPermissions: ['https://creator.xiaohongshu.com/*', 'https://*.xiaohongshu.com/*'],
     format: 'markdown',
   },
 };

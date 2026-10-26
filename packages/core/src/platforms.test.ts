@@ -3,7 +3,15 @@ import { isPlatformId } from './platforms';
 
 describe('isPlatformId', () => {
   it('accepts every registered platform', () => {
-    for (const id of ['juejin', 'zhihu', 'csdn', 'aliyun', 'tencentcloud']) {
+    for (const id of [
+      'juejin',
+      'zhihu',
+      'csdn',
+      'aliyun',
+      'tencentcloud',
+      'douyin',
+      'xiaohongshu',
+    ]) {
       expect(isPlatformId(id)).toBe(true);
     }
   });

@@ -25,7 +25,7 @@ export default defineConfig({
     description: '把本地 Markdown 一键保存为掘金、知乎、CSDN 等平台的草稿',
     minimum_chrome_version: '116',
     // No content scripts, no externally_connectable, no <all_urls>: only the platforms we post to.
-    permissions: ['storage', 'cookies', 'declarativeNetRequestWithHostAccess'],
+    permissions: ['storage', 'cookies', 'declarativeNetRequestWithHostAccess', 'scripting'],
     host_permissions: [...new Set(Object.values(PLATFORMS).flatMap((p) => p.hostPermissions))],
     action: {},
   },
