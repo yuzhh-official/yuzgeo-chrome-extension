@@ -1,11 +1,37 @@
 @import 'tailwindcss';
 
+/* Design A tokens. System fonts only: extension pages make no font requests. */
+@theme {
+  --font-sans: Inter, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-line: #e3e6eb;
+  --color-line-soft: #eef0f3;
+  --color-control: #d5d9e0;
+  --color-ink: #16181d;
+  --color-ink-soft: #3d4350;
+  --color-muted: #5b6270;
+  --color-chip: #f1f3f6;
+  --color-accent: #2457d6;
+  --color-accent-strong: #1a43aa;
+  --color-accent-soft: #eaf0fd;
+  --color-accent-line: #c9d6f7;
+  --color-accent-wash: #f5f8ff;
+  --color-ok: #1f7a4d;
+  --color-ok-soft: #f2faf5;
+  --color-warn: #7a4f00;
+  --color-warn-soft: #fff6e0;
+  --color-bad: #b42318;
+  --color-bad-strong: #8e1c13;
+  --color-bad-soft: #fdf1f0;
+}
+
 .markdown-preview {
-  font:
-    15px/1.7 system-ui,
-    sans-serif;
+  font-size: 15px;
+  line-height: 1.8;
   overflow-wrap: anywhere;
-  color: #111827;
+  color: var(--color-ink);
 }
 .markdown-preview > :first-child {
   margin-top: 0;
@@ -50,13 +76,20 @@
   height: auto;
 }
 .markdown-preview pre {
-  padding: 12px;
-  background: #f3f4f6;
+  padding: 14px 16px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 8px;
   overflow: auto;
 }
 .markdown-preview code {
-  font-family: ui-monospace, monospace;
-  font-size: 0.9em;
+  font-family: var(--font-mono);
+  font-size: 0.87em;
+}
+.markdown-preview :not(pre) > code {
+  padding: 1px 6px;
+  background: var(--color-chip);
+  border-radius: 4px;
 }
 .markdown-preview blockquote {
   border-left: 3px solid #cbd5e1;
@@ -68,11 +101,15 @@
 }
 .markdown-preview td,
 .markdown-preview th {
-  border: 1px solid #d1d5db;
-  padding: 4px 8px;
+  border: 1px solid var(--color-line);
+  padding: 6px 14px;
+}
+.markdown-preview th {
+  background: var(--color-canvas);
+  text-align: left;
 }
 .markdown-preview a {
-  color: #2563eb;
+  color: var(--color-accent);
   text-decoration: underline;
 }
 .markdown-preview hr {

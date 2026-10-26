@@ -69,9 +69,11 @@ test('built dashboard imports Markdown and communicates with its worker', async 
         /console.log/,
       );
       assert.equal(await page.locator('article img').count(), 0);
-      await page.getByRole('button', { name: '查看 Markdown 原文' }).click();
+      await page.getByRole('tab', { name: 'Markdown 原文' }).click();
       assert.match(await page.locator('pre').innerText(), /title: yuzgeo/);
-      await page.getByRole('button', { name: '返回预览' }).click();
+      await page.getByRole('tab', { name: '各平台差异' }).click();
+      await page.getByText('转换为富文本', { exact: false }).waitFor();
+      await page.getByRole('tab', { name: '预览' }).click();
       await page.getByRole('article', { name: '正文预览' }).locator('table').waitFor();
     });
 
