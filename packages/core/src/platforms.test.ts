@@ -13,6 +13,8 @@ describe('isPlatformId', () => {
       'xiaohongshu',
       'sohu',
       'baijiahao',
+      'weixin',
+      'toutiao',
     ]) {
       expect(isPlatformId(id)).toBe(true);
     }

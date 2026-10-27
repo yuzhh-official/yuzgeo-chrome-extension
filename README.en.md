@@ -2,7 +2,7 @@
 
 # yuzgeo
 
-**An open-source Chrome extension for cross-posting: save one local Markdown article as drafts on Juejin, Zhihu, CSDN, Alibaba Cloud Developer Community, Tencent Cloud Developer Community, Douyin and Xiaohongshu long posts in one click.**
+**An open-source Chrome extension that saves local Markdown as text-only drafts across content platforms. See the support table below for verification status.**
 
 [简体中文](README.md) · English
 
@@ -43,10 +43,14 @@ It is built for developers, tech bloggers and teams who write for several Chines
 | Xiaohongshu long posts (小红书长文)                  | Formatted by its editor                        | ✅          | ✅ Saved to the browser's local draft box | Implemented, pending real-account verification                              |
 | Sohu (搜狐号)                                        | HTML via editor; code/tables become paragraphs | ✅          | Implemented                               | Account lookup verified; saving blocked by account verification requirement |
 | Baijiahao (百家号)                                   | Rich text (HTML)                               | Implemented | Implemented                               | Pending real-account verification                                           |
+| WeChat Official Accounts (微信公众号)                | HTML; links become text                        | Implemented | Implemented                               | Public protocol implementation; pending real-account verification           |
+| Toutiao (头条号)                                     | HTML via editor; code/tables become paragraphs | ✅          | ✅ Autosave                               | Account lookup, editor import and draft list verified with a real account   |
 
 > **The current version syncs text only.** Headings, paragraphs, code blocks, tables, links and image captions are kept; images and covers are not uploaded yet.
 
 Sohu uses a fresh editor tab and only clicks “存草稿”; account restrictions are respected. Baijiahao uses its draft API with an editor token held only in memory. See [verification notes](docs/PLATFORM-NOTES-sohu-baijiahao.md) for sources and limitations.
+
+Toutiao opens a fresh article editor, waits for a new autosave confirmation and never clicks publish. Titles must contain 2–30 characters. WeChat is pending real-account verification; links become text and covers are not uploaded. If the platform requires a cover, add it in its own backend. WeChat results link to the backend entry rather than persisting session tokens in history. See [WeChat/Toutiao notes](docs/PLATFORM-NOTES-weixin-toutiao.md).
 
 ## How it works
 
@@ -115,6 +119,9 @@ The repository includes an MCP server skeleton (`@yuzgeo/mcp-server`). It will l
 - [x] Douyin long posts
 - [x] Xiaohongshu long posts
 - [x] Sohu and Baijiahao adapters (live draft verification pending)
+- [x] Toutiao (account lookup, editor import and autosave verified)
+- [x] WeChat Official Accounts adapter (pending real-account verification)
+- [ ] Phoenix / Dafeng (deferred at the user's request)
 - [ ] Weibo long articles (deferred)
 - [ ] Chrome Web Store release
 

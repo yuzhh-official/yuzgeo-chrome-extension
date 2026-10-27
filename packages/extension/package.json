@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:background": "wxt build && node --test scripts/background-smoke.mjs",
-    "test:ui": "wxt build && node --test scripts/dashboard-smoke.mjs scripts/sohu-editor-smoke.mjs"
+    "test:ui": "wxt build && node --test scripts/dashboard-smoke.mjs scripts/sohu-editor-smoke.mjs scripts/toutiao-editor-smoke.mjs"
   },
   "dependencies": {
     "@yuzgeo/core": "workspace:*",

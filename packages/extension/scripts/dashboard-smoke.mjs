@@ -33,9 +33,14 @@ test('built dashboard imports Markdown and communicates with its worker', async 
         if (String(url).includes('/api/v4/me')) return Response.json({ name: '测试账号' });
         if (String(url).endsWith('/builder/app/appinfo'))
           return Response.json({ errno: 401, errmsg: '请先登录' });
+        if (String(url) === 'https://mp.weixin.qq.com/')
+          return new Response('<html>扫码登录</html>');
         throw new Error(`Unexpected network request: ${url}`);
       };
     });
+    await context.route('https://mp.toutiao.com/**', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<html><body>扫码登录</body></html>' }),
+    );
     await context.addCookies([
       { name: '_xsrf', value: 'isolated-test-token', url: 'https://www.zhihu.com' },
     ]);
@@ -55,6 +60,11 @@ test('built dashboard imports Markdown and communicates with its worker', async 
       assert.equal(await page.getByRole('checkbox', { name: '知乎' }).isEnabled(), true);
       assert.equal(await page.getByRole('checkbox', { name: '搜狐号' }).isEnabled(), false);
       assert.equal(await page.getByRole('checkbox', { name: '百家号' }).isEnabled(), false);
+      assert.equal(await page.getByRole('checkbox', { name: '微信公众号' }).isEnabled(), false);
+      assert.equal(
+        await page.getByRole('checkbox', { name: '头条号', exact: true }).isEnabled(),
+        false,
+      );
       assert.equal(await page.getByRole('checkbox', { name: '微博头条文章' }).count(), 0);
     });
 
@@ -245,11 +255,13 @@ test('built dashboard imports Markdown and communicates with its worker', async 
       assert.doesNotMatch(zhihu.content, /<img|\.png|equation/);
       assert.equal(zhihu.titleImage, undefined);
       assert.ok(
-        requests.every((r) =>
-          // Login checks of the other platforms run when the platform list loads.
-          /user_api|api\/v4\/me|article_draft\/create|api\/articles\/|my\/user\/getUser|api\/user\/session|builder\/app\/appinfo/.test(
-            r.url,
-          ),
+        requests.every(
+          (r) =>
+            // Login checks of the other platforms run when the platform list loads.
+            /^https:\/\/mp\.weixin\.qq\.com\/$/.test(r.url) ||
+            /user_api|api\/v4\/me|article_draft\/create|api\/articles\/|my\/user\/getUser|api\/user\/session|builder\/app\/appinfo/.test(
+              r.url,
+            ),
         ),
         JSON.stringify(requests),
       );

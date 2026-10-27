@@ -9,6 +9,8 @@ import { tencentcloud } from './tencentcloud';
 import type { ExtensionAdapter } from './types';
 import { xiaohongshu } from './xiaohongshu';
 import { zhihu } from './zhihu';
+import { weixin } from './weixin';
+import { toutiao } from './toutiao';
 
 export const adapters: Partial<Record<PlatformId, ExtensionAdapter>> = {
   juejin,
@@ -20,6 +22,8 @@ export const adapters: Partial<Record<PlatformId, ExtensionAdapter>> = {
   xiaohongshu,
   sohu,
   baijiahao,
+  weixin,
+  toutiao,
 };
 
 export function getAdapter(id: PlatformId): ExtensionAdapter {

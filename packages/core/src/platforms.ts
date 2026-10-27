@@ -8,6 +8,8 @@ export const PLATFORM_IDS = [
   'xiaohongshu',
   'sohu',
   'baijiahao',
+  'weixin',
+  'toutiao',
 ] as const;
 
 export type PlatformId = (typeof PLATFORM_IDS)[number];
@@ -24,6 +26,20 @@ export interface PlatformMeta {
 }
 
 export const PLATFORMS: Record<PlatformId, PlatformMeta> = {
+  weixin: {
+    id: 'weixin',
+    name: '微信公众号',
+    homepage: 'https://mp.weixin.qq.com',
+    hostPermissions: ['https://mp.weixin.qq.com/*'],
+    format: 'html',
+  },
+  toutiao: {
+    id: 'toutiao',
+    name: '头条号',
+    homepage: 'https://mp.toutiao.com',
+    hostPermissions: ['https://mp.toutiao.com/*'],
+    format: 'html',
+  },
   juejin: {
     id: 'juejin',
     name: '掘金',
