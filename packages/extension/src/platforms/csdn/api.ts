@@ -1,10 +1,12 @@
-import { getSigningMaterial, invalidateSigningMaterial } from './credentials';
+import { runInPage } from '../../lib/page-context';
+import { EDITOR_PAGE_URL, getSigningMaterial, invalidateSigningMaterial } from './credentials';
+import { requestInCsdn } from './page-request';
 import { signCaRequest } from './sign';
 
 export const BIZAPI = 'https://bizapi.csdn.net';
 /** Sent and signed verbatim; the gateway compares the signed value with the received header. */
 export const ACCEPT = 'application/json, text/plain, */*';
-export const JSON_CONTENT_TYPE = 'application/json';
+export const JSON_CONTENT_TYPE = 'application/json;';
 
 /** bizapi responses look like `{ code: 200, msg: 'success', data: … }`. */
 export interface CsdnResponse<T> {
@@ -51,16 +53,26 @@ async function send(
     { method, url, accept: ACCEPT, contentType, nonce: newNonce() },
     material,
   );
-  return fetch(url, {
-    method,
-    credentials: 'include',
-    headers: {
-      accept: ACCEPT,
-      ...(contentType ? { 'content-type': contentType } : {}),
-      ...signed,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
+  const result = await runInPage(
+    { url: EDITOR_PAGE_URL, match: 'https://mp.csdn.net/*' },
+    requestInCsdn,
+    [
+      {
+        url,
+        method,
+        headers: {
+          accept: ACCEPT,
+          ...(contentType ? { 'content-type': contentType } : {}),
+          ...signed,
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+    ],
     signal,
+  );
+  return new Response(result.text, {
+    status: result.status,
+    headers: result.gatewayError ? { 'x-ca-error-message': result.gatewayError } : {},
   });
 }
 

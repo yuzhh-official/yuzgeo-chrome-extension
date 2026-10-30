@@ -34,6 +34,7 @@ export default function App() {
   const [selected, setSelected] = useState<Set<PlatformId>>(loadSelection);
   const [platforms, setPlatforms] = useState<PlatformStatus[] | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
+  const [toutiaoTitle, setToutiaoTitle] = useState('');
 
   const openFile = useCallback(async (src: LocalSource, path: string) => {
     const id = ++readId.current;
@@ -52,6 +53,8 @@ export default function App() {
         throw new Error('去除图片后没有可同步的正文，请补充内容并保存后重新选择');
       if (id !== readId.current) return;
       setOpen({ path, raw, doc, imageCount: collectImageUrls(parsed.markdown).length });
+      const platformTitle = doc.frontMatter.platforms?.toutiao?.title;
+      setToutiaoTitle(typeof platformTitle === 'string' ? platformTitle : doc.title);
     } catch (e) {
       if (id === readId.current) {
         setOpen(null);
@@ -107,6 +110,13 @@ export default function App() {
 
   const submit = async (targets: PlatformId[]) => {
     if (!open) return;
+    if (
+      targets.includes('toutiao') &&
+      ([...toutiaoTitle.trim()].length < 2 || [...toutiaoTitle.trim()].length > 30)
+    ) {
+      setError('请将“头条号标题”调整为 2–30 字后重试；也可以取消勾选头条号，先同步其他平台。');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -114,6 +124,9 @@ export default function App() {
         markdown: open.raw,
         filePath: open.path,
         platforms: targets,
+        ...(targets.includes('toutiao')
+          ? { platformTitles: { toutiao: toutiaoTitle.trim() } }
+          : {}),
       });
       setTaskId(taskId);
       setHistoryKey((key) => key + 1);
@@ -167,6 +180,30 @@ export default function App() {
               selected={selected}
               onToggle={togglePlatform}
             />
+            {open && selected.has('toutiao') && (
+              <div className="mt-4 border-t border-line-soft pt-3">
+                <label htmlFor="toutiao-title" className="font-medium">
+                  头条号标题
+                </label>
+                <input
+                  id="toutiao-title"
+                  className="mt-1 w-full rounded-lg border border-control bg-surface px-3 py-2"
+                  value={toutiaoTitle}
+                  onChange={(event) => setToutiaoTitle(event.target.value)}
+                  aria-describedby="toutiao-title-help"
+                  aria-invalid={
+                    [...toutiaoTitle.trim()].length < 2 || [...toutiaoTitle.trim()].length > 30
+                  }
+                />
+                <p
+                  id="toutiao-title-help"
+                  className={`mt-1 text-xs ${[...toutiaoTitle.trim()].length < 2 || [...toutiaoTitle.trim()].length > 30 ? 'text-bad' : 'text-muted'}`}
+                >
+                  {[...toutiaoTitle.trim()].length}/30 字，需 2–30
+                  字。只影响头条号，其他平台保留原标题。
+                </p>
+              </div>
+            )}
             <button
               type="button"
               className="mt-3.5 min-h-11 w-full rounded-lg bg-accent font-semibold text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:bg-control disabled:text-muted"

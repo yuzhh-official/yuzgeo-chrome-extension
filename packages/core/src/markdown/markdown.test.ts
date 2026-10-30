@@ -108,6 +108,25 @@ describe('renderHtml', () => {
 });
 
 describe('preparePost', () => {
+  it('applies an explicit platform title without changing the source or other platforms', async () => {
+    const doc = {
+      title: '原始长标题',
+      markdown: '完整正文',
+      frontMatter: { platforms: { toutiao: { title: '文件中的短标题' } } },
+    };
+    expect((await preparePost(doc, { platform: 'toutiao', format: 'html' })).title).toBe(
+      '文件中的短标题',
+    );
+    expect(
+      (await preparePost(doc, { platform: 'toutiao', format: 'html', title: ' 手动短标题 ' }))
+        .title,
+    ).toBe('手动短标题');
+    expect((await preparePost(doc, { platform: 'juejin', format: 'markdown' })).title).toBe(
+      '原始长标题',
+    );
+    expect(doc.title).toBe('原始长标题');
+    expect(doc.markdown).toBe('完整正文');
+  });
   it('omits images and cover while keeping text, tags and platform settings', async () => {
     const post = await preparePost(
       {

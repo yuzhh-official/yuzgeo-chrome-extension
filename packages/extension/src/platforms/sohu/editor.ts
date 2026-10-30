@@ -55,8 +55,36 @@ export async function fillDraft(input: DraftInput): Promise<PageResult<{ id?: st
           ? '搜狐号当前账号未实名认证，“存草稿”不可用；请在平台完成认证后重试'
           : '搜狐号“存草稿”暂不可用，请在创作中心检查账号权限',
       );
-    if (title.value.trim() || body.textContent?.trim())
-      return fail('搜狐号编辑器已有内容，已停止操作以避免覆盖');
+    // A fresh route can restore the last saved draft. Only the platform's explicitly labelled
+    // recovery undo is safe here: clearing fields ourselves could overwrite that old draft ID.
+    const recoveryUndo = () =>
+      [...document.querySelectorAll<HTMLElement>('p')].find(
+        (el) =>
+          visible(el) &&
+          el.textContent?.trim() === '撤销' &&
+          el.parentElement?.textContent?.replace(/\s+/g, '') === '已从草稿箱中恢复撤销',
+      );
+    let undo = recoveryUndo();
+    if (title.value.trim() || body.textContent?.trim() || undo) {
+      const recoveryDeadline = Date.now() + Math.min(input.timeoutMs, 1500);
+      while (!undo && Date.now() < recoveryDeadline) {
+        await pause();
+        undo = recoveryUndo();
+      }
+      if (undo) {
+        undo.click();
+        do {
+          await pause();
+          title = document.querySelector<HTMLInputElement>('input[placeholder*="请输入标题"]');
+          body = document.querySelector<HTMLElement>('.ql-editor[contenteditable="true"]');
+          if (title && body && !title.value.trim() && !body.textContent?.trim()) break;
+        } while (Date.now() < recoveryDeadline);
+      }
+      if (!title || !body || title.value.trim() || body.textContent?.trim() || !undo)
+        return fail(
+          '搜狐号恢复了已有内容，已停止操作以避免覆盖。请在新建文章页点击“已从草稿箱中恢复”旁的“撤销”，再重试',
+        );
+    }
 
     // Quill does not reliably preserve tables/code blocks. Convert them to readable paragraphs,
     // retaining each row/line; allow only non-executable text markup in the editor paste.

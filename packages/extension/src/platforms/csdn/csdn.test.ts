@@ -7,6 +7,19 @@ import {
   setSigningMaterialSource,
 } from './credentials';
 import { csdn } from './index';
+import { requestInCsdn } from './page-request';
+
+vi.mock('../../lib/page-context', () => ({
+  runInPage: async (
+    _target: unknown,
+    fn: (...args: unknown[]) => Promise<{ ok: boolean; value?: unknown; error?: string }>,
+    args: unknown[],
+  ) => {
+    const result = await fn(...args);
+    if (!result.ok) throw new Error(result.error);
+    return result.value;
+  },
+}));
 
 const ctx: AdapterContext = { signal: new AbortController().signal, log: vi.fn() };
 // Dummy values for tests only.
@@ -40,7 +53,10 @@ function stubCookies(values: Record<string, string>) {
   });
 }
 
-beforeEach(() => setSigningMaterialSource(async () => FAKE));
+beforeEach(() => {
+  setSigningMaterialSource(async () => FAKE);
+  vi.stubGlobal('location', { origin: 'https://mp.csdn.net' });
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   setSigningMaterialSource();
@@ -62,6 +78,24 @@ describe('signing material extraction', () => {
     const code = `var c={appKey:"${FAKE.appKey}",appSecret:"${FAKE.appSecret}"};`;
     expect(extractSigningMaterial(code)).toEqual(FAKE);
     expect(extractSigningMaterial(`appKey:"${FAKE.appKey}"`)).toBeUndefined();
+  });
+
+  it('recognizes current header assignment syntax and prefers the creator bundle', async () => {
+    setSigningMaterialSource();
+    const fetchMock = vi.fn(
+      async (url: string) =>
+        new Response(
+          url === 'https://mp.csdn.net/mp_blog/creation/editor'
+            ? '<script type="module" src="https://csdnimg.cn/release/mpfev3/mp_v3/index-current.js"></script><script src="https://g.csdnimg.cn/legacy.js"></script>'
+            : `e.headers["X-Ca-Key"]="${FAKE.appKey}";sign({appSecret:"${FAKE.appSecret}"})`,
+        ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await getSigningMaterial(ctx.signal)).toEqual(FAKE);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://mp.csdn.net/mp_blog/creation/editor',
+      'https://csdnimg.cn/release/mpfev3/mp_v3/index-current.js',
+    ]);
   });
 
   it('fetches the editor page and scans its bundles', async () => {
@@ -119,9 +153,11 @@ describe('csdn adapter', () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(SAVE_URL);
     expect(init?.method).toBe('POST');
-    expect(init?.signal).toBe(ctx.signal);
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+    expect(init?.credentials).toBe('include');
     const headers = init?.headers as Record<string, string>;
     expect(headers['x-ca-key']).toBe(FAKE.appKey);
+    expect(headers['content-type']).toBe('application/json;');
     expect(headers['x-ca-signature-headers']).toBe('x-ca-key,x-ca-nonce');
     expect(headers['x-ca-signature']).toMatch(/^[A-Za-z0-9+/]+=*$/);
     const body = JSON.parse(init?.body as string) as Record<string, unknown>;
@@ -176,5 +212,32 @@ describe('csdn adapter', () => {
     await expect(csdn.createDraft(post, ctx)).rejects.toThrow(
       /接口签名被拒绝（Invalid Signature）/,
     );
+  });
+
+  it('never retries a write when the response is lost', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Network error'));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(csdn.createDraft(post, ctx)).rejects.toThrow(/先检查草稿箱/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('page request rejects other hosts, publishing and editing old articles', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const input = {
+      url: SAVE_URL,
+      method: 'POST',
+      headers: {},
+      body: JSON.stringify({ status: 2, article_id: '' }),
+    };
+    for (const bad of [
+      { ...input, url: 'https://evil.example/blog-console-api/v1/postedit/saveArticle' },
+      { ...input, body: JSON.stringify({ status: 0, article_id: '' }) },
+      { ...input, body: JSON.stringify({ status: 2, article_id: '123' }) },
+    ])
+      expect((await requestInCsdn(bad)).ok).toBe(false);
+    vi.stubGlobal('location', { origin: 'https://passport.csdn.net' });
+    expect((await requestInCsdn(input)).ok).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

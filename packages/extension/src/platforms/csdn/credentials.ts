@@ -7,7 +7,7 @@ import type { SigningMaterial } from './sign';
 
 export const EDITOR_PAGE_URL = 'https://mp.csdn.net/mp_blog/creation/editor';
 /** Hosts whose scripts may carry the editor's API client. */
-const BUNDLE_HOSTS = ['mp.csdn.net', 'g.csdnimg.cn'];
+const BUNDLE_HOSTS = ['mp.csdn.net', 'g.csdnimg.cn', 'csdnimg.cn'];
 /** Upper bound on bundles fetched per extraction. */
 const MAX_BUNDLES = 20;
 
@@ -16,6 +16,7 @@ const MAX_BUNDLES = 20;
  * names vary between builds, so match a few spellings; the key is numeric, the secret alphanumeric.
  */
 const KEY_PATTERNS = [
+  /\[\s*["']x-ca-key["']\s*\]\s*=\s*["'](\d{6,12})["']/i,
   /["']?(?:appKey|app_key|caKey|xCaKey|x-ca-key)["']?\s*[:=,]\s*["'](\d{6,12})["']/i,
 ];
 const SECRET_PATTERNS = [
@@ -62,7 +63,11 @@ export const fetchSigningMaterial: SigningMaterialSource = async (signal) => {
   if (inline) return inline;
 
   // App bundles are usually listed last, after vendor/runtime chunks.
-  const bundles = findBundleUrls(html, EDITOR_PAGE_URL).reverse().slice(0, MAX_BUNDLES);
+  const bundles = findBundleUrls(html, EDITOR_PAGE_URL)
+    .reverse()
+    // Prefer the current creator-center client over shared tracking/legacy SDKs.
+    .sort((a, b) => Number(b.includes('/release/mpfev3/')) - Number(a.includes('/release/mpfev3/')))
+    .slice(0, MAX_BUNDLES);
   for (const url of bundles) {
     let code: string;
     try {

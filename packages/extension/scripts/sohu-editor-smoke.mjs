@@ -92,6 +92,48 @@ test('Sohu draft editor respects platform controls and verifies text before savi
       assert.match((await page.evaluate(fillDraft, input)).error, /避免覆盖/);
       assert.equal(await page.locator('input').inputValue(), '已有标题');
     });
+    await t.test('uses only the official recovery undo before filling a fresh draft', async () => {
+      await fixture({ existing: true });
+      await page.evaluate(() => {
+        window.oldDraftId = 'existing-draft';
+        const notice = document.createElement('div');
+        notice.innerHTML = '<p>已从草稿箱中恢复</p><p>撤销</p>';
+        notice.lastChild.onclick = () => {
+          window.oldDraftId = null;
+          document.querySelector('input').value = '';
+          document.querySelector('.ql-editor').textContent = '';
+          notice.remove();
+        };
+        document.body.append(notice);
+      });
+      assert.equal((await page.evaluate(fillDraft, input)).ok, true);
+      assert.equal(await page.evaluate(() => window.oldDraftId), null);
+      assert.equal(await page.evaluate(() => window.saved), 1);
+    });
+    await t.test(
+      'unrelated undo and unsuccessful recovery cancellation never overwrite content',
+      async () => {
+        for (const message of ['可撤销操作', '已从草稿箱中恢复']) {
+          await fixture({ existing: true });
+          await page.evaluate((message) => {
+            const notice = document.createElement('div');
+            notice.innerHTML = `<p>${message}</p><p>撤销</p>`;
+            notice.lastChild.onclick = () => {
+              window.undoClicked = true;
+            };
+            window.undoClicked = false;
+            document.body.append(notice);
+          }, message);
+          assert.equal((await page.evaluate(fillDraft, input)).ok, false);
+          assert.equal(await page.locator('input').inputValue(), '已有标题');
+          assert.equal(await page.evaluate(() => window.saved), 0);
+          assert.equal(
+            await page.evaluate(() => window.undoClicked),
+            message === '已从草稿箱中恢复',
+          );
+        }
+      },
+    );
     await t.test('incomplete paste is never saved', async () => {
       await fixture({ drop: true });
       assert.match((await page.evaluate(fillDraft, input)).error, /未完整保留/);

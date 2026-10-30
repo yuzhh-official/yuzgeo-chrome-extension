@@ -33,6 +33,8 @@ export interface CreateDraftsParams {
   /** Markdown file name/path, used as the fallback title. */
   filePath: string;
   platforms: PlatformId[];
+  /** Explicit per-platform titles; the original file and other platforms are unchanged. */
+  platformTitles?: Partial<Record<PlatformId, string>>;
 }
 
 /**

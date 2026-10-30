@@ -268,6 +268,75 @@ test('built dashboard imports Markdown and communicates with its worker', async 
       assert.equal(await page.locator('article img').count(), 0);
     });
 
+    await t.test(
+      'Toutiao short title is explicit, validated before submitting and sent only to Toutiao',
+      async () => {
+        await page.evaluate(() => {
+          const send = globalThis.chrome.runtime.sendMessage.bind(globalThis.chrome.runtime);
+          window.titleRequests = [];
+          globalThis.chrome.runtime.sendMessage = async (message, ...rest) => {
+            if (message.method === 'platforms/list') {
+              const response = await send(message, ...rest);
+              response.result = response.result.map((p) =>
+                p.id === 'toutiao' ? { ...p, loggedIn: true } : p,
+              );
+              return response;
+            }
+            if (message.method === 'drafts/create') {
+              window.titleRequests.push(message.params);
+              return { id: message.id, ok: true, result: { taskId: 'title-test' } };
+            }
+            if (message.method === 'tasks/get' && message.params.taskId === 'title-test')
+              return {
+                id: message.id,
+                ok: true,
+                result: {
+                  id: 'title-test',
+                  title: '测试',
+                  createdAt: Date.now(),
+                  results: [
+                    { platform: 'juejin', status: 'succeeded', warnings: [] },
+                    { platform: 'toutiao', status: 'failed', warnings: [], error: '模拟网络错误' },
+                  ],
+                },
+              };
+            return send(message, ...rest);
+          };
+        });
+        await page.getByRole('button', { name: '刷新登录状态' }).click();
+        await page.getByRole('checkbox', { name: '头条号', exact: true }).check();
+        const original = '用于测试头条号独立短标题的长文章标题'.repeat(3);
+        await page.locator('input[type=file]').setInputFiles({
+          name: 'long-title.md',
+          mimeType: 'text/markdown',
+          buffer: Buffer.from(`# ${original}\n\n完整正文。`),
+        });
+        const title = page.getByRole('textbox', { name: '头条号标题' });
+        await title.waitFor();
+        assert.equal(await title.inputValue(), original);
+        await page.getByRole('button', { name: /保存为草稿/ }).click();
+        await page.getByRole('alert').filter({ hasText: '调整为 2–30 字' }).waitFor();
+        assert.equal(await page.evaluate(() => window.titleRequests.length), 0);
+        await title.fill('头条专用短标题');
+        await page.getByRole('button', { name: /保存为草稿/ }).click();
+        await page.getByRole('button', { name: '重试失败的平台' }).waitFor();
+        let requests = await page.evaluate(() => window.titleRequests);
+        assert.deepEqual(requests[0].platformTitles, { toutiao: '头条专用短标题' });
+        assert.equal(requests[0].markdown, `# ${original}\n\n完整正文。`);
+        await page.getByRole('button', { name: '重试失败的平台' }).click();
+        requests = await page.evaluate(() => window.titleRequests);
+        assert.deepEqual(requests[1].platforms, ['toutiao']);
+        assert.deepEqual(requests[1].platformTitles, { toutiao: '头条专用短标题' });
+        await page.locator('input[type=file]').setInputFiles({
+          name: 'next.md',
+          mimeType: 'text/markdown',
+          buffer: Buffer.from('# 下一篇文章\n\n正文。'),
+        });
+        await page.getByRole('heading', { name: '下一篇文章', exact: true }).waitFor();
+        assert.equal(await title.inputValue(), '下一篇文章');
+      },
+    );
+
     assert.deepEqual(errors, []);
   } finally {
     await context.close();

@@ -8,6 +8,7 @@ export interface PrepareOptions {
   platform: PlatformId;
   format: ContentFormat;
   html?: HtmlRenderOptions;
+  title?: string;
 }
 
 /** Text-only draft preparation: no image reads, downloads, uploads or cover. */
@@ -16,6 +17,7 @@ export async function preparePost(
   options: PrepareOptions,
 ): Promise<RenderedPost> {
   const markdown = textOnlyMarkdown(doc.markdown);
+  const extra = doc.frontMatter.platforms?.[options.platform] ?? {};
   if (!markdown.trim()) throw new Error('去除图片后没有可同步的正文');
   // Keep formulas as text; some platform math hooks generate remote images.
   const body =
@@ -23,12 +25,15 @@ export async function preparePost(
       ? renderHtml(markdown, { codeBlock: options.html?.codeBlock })
       : markdown;
   return {
-    title: doc.title,
+    title:
+      options.title?.trim() ||
+      (typeof extra.title === 'string' ? extra.title.trim() : '') ||
+      doc.title,
     summary: doc.frontMatter.summary,
     tags: doc.frontMatter.tags ?? [],
     body,
     markdown,
-    extra: doc.frontMatter.platforms?.[options.platform] ?? {},
+    extra,
   };
 }
 

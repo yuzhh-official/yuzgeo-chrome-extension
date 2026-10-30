@@ -44,6 +44,18 @@ export async function getTask(id: string): Promise<SyncTask | null> {
 
 export async function createDrafts(params: CreateDraftsParams): Promise<string> {
   if (params.platforms.length === 0) throw new Error('请至少选择一个平台');
+  if (params.platformTitles !== undefined) {
+    if (
+      !params.platformTitles ||
+      typeof params.platformTitles !== 'object' ||
+      Array.isArray(params.platformTitles)
+    )
+      throw new Error('平台标题格式无效');
+    for (const title of Object.values(params.platformTitles)) {
+      if (typeof title !== 'string' || !title.trim() || [...title].length > 200)
+        throw new Error('平台标题必须是 1–200 字的文字');
+    }
+  }
   const fallbackTitle =
     params.filePath
       .split('/')
@@ -64,7 +76,11 @@ export async function createDrafts(params: CreateDraftsParams): Promise<string> 
   all.unshift(task);
   await saveTasks();
 
-  void Promise.allSettled(task.results.map((result) => runPlatform(task, result, doc)));
+  void Promise.allSettled(
+    task.results.map((result) =>
+      runPlatform(task, result, doc, params.platformTitles?.[result.platform]),
+    ),
+  );
   return task.id;
 }
 
@@ -72,6 +88,7 @@ async function runPlatform(
   task: SyncTask,
   result: PlatformTaskResult,
   doc: ParsedDocument,
+  title?: string,
 ): Promise<void> {
   const update = (patch: Partial<PlatformTaskResult>) => {
     Object.assign(result, patch);
@@ -94,6 +111,7 @@ async function runPlatform(
       platform,
       format: adapter.meta.format,
       html: adapter.htmlOptions,
+      title,
     });
 
     update({ step: '创建草稿' });

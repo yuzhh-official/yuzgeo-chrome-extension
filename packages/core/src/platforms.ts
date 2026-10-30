@@ -75,6 +75,7 @@ export const PLATFORMS: Record<PlatformId, PlatformMeta> = {
       'https://bizapi.csdn.net/*',
       'https://me.csdn.net/*',
       'https://g.csdnimg.cn/*',
+      'https://csdnimg.cn/*',
     ],
     format: 'markdown',
   },
